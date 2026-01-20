@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Je révise bien mon examen civique</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background-color: #f0f0f0; }
+  #quiz-container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);}
+  h1,h2,h3 { text-align: center; }
+  #options button { display: block; margin: 10px 0; padding: 10px; width: 100%; }
+  #category-part { font-weight: bold; margin-bottom: 10px; }
+  #timer { float: right; font-weight: bold; }
+  #review-container { display:none; }
+  .correct { background-color: #c8e6c9; }
+  .wrong { background-color: #ffcdd2; }
+</style>
+</head>
+<body>
+
+<div id="start-container">
+  <h1>Je révise bien mon examen civique</h1>
+  <h2>Choisissez le type d'examen :</h2>
+  <button onclick="startExam('CSP')">CSP</button>
+  <button onclick="startExam('CR')">CR</button>
+</div>
+
+<div id="quiz-container" style="display:none;">
+  <div id="category-part"></div>
+  <div id="timer">45:00</div>
+  <h3 id="question-text"></h3>
+  <div id="options"></div>
+  <button id="next-btn" style="display:none;" onclick="nextQuestion()">Suivant</button>
+</div>
+
+<div id="result-container" style="display:none;">
+  <h2>Résultat</h2>
+  <div id="score"></div>
+  <div id="pass-fail"></div>
+  <div id="part-stats"></div>
+  <button onclick="viewHistory()">Voir l'historique des erreurs</button>
+  <button onclick="restartExam()">Recommencer</button>
+</div>
+
+<div id="review-container">
+  <h2>Historique des erreurs</h2>
+  <div id="review-list"></div>
+  <button onclick="closeReview()">Fermer</button>
+</div>
+
+<script>
+let examType = '';
+let questions = [];
+let currentIndex = 0;
+let score = 0;
+let timer;
+let timeLeft = 45 * 60; // 45 minutes
+let userAnswers = [];
+let parts = [];
+let localStorageKey = 'exam_history';
+
+// Start Exam
+function startExam(type){
+  examType = type;
+  if(type === 'CR'){
+    alert('CR est en préparation, veuillez choisir CSP.');
+    return;
+  }
+  fetch('csp.json')
+    .then(res => res.json())
+    .then(data => {
+      prepareQuestions(data);
+      document.getElementById('start-container').style.display = 'none';
+      document.getElementById('quiz-container').style.display = 'block';
+      startTimer();
+      showQuestion();
+    });
+}
+
+// Prepare 40 questions (8 per part)
+function prepareQuestions(data){
+  const grouped = {};
+  data.forEach(q => {
+    if(!grouped[q.part]) grouped[q.part] = [];
+    grouped[q.part].push(q);
+  });
+  questions = [];
+  parts = Object.keys(grouped);
+  parts.forEach(part => {
+    shuffle(grouped[part]);
+    questions = questions.concat(grouped[part].slice(0, 8));
+  });
+  shuffle(questions);
+}
+
+// Shuffle function
+function shuffle(array){
+  for(let i=array.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+// Show Question
+function showQuestion(){
+  const q = questions[currentIndex];
+  document.getElementById('category-part').innerText = `Part: ${q.part} | Category: ${q.category}`;
+  document.getElementById('question-text').innerText = q.question;
+  const optionsDiv = document.getElementById('options');
+  optionsDiv.innerHTML = '';
+  for(let key in q.options){
+    const btn = document.createElement('button');
+    btn.innerText = `${key}: ${q.options[key]}`;
+    btn.onclick = () => selectAnswer(key);
+    optionsDiv.appendChild(btn);
+  }
+}
+
+// Select Answer
+function selectAnswer(answer){
+  const q = questions[currentIndex];
+  const optionsBtns = document.querySelectorAll('#options button');
+  userAnswers[currentIndex] = {questionId: q.id, answer: answer};
+  optionsBtns.forEach(btn => btn.disabled = true);
+  optionsBtns.forEach(btn => {
+    if(btn.innerText.startsWith(q.correctAnswer)) btn.classList.add('correct');
+    if(btn.innerText.startsWith(answer) && answer !== q.correctAnswer) btn.classList.add('wrong');
+  });
+  if(answer === q.correctAnswer) score++;
+  const explanation = document.createElement('div');
+  explanation.innerHTML = `<strong>Explication:</strong> ${q.explanation}`;
+  document.getElementById('quiz-container').appendChild(explanation);
+  document.getElementById('next-btn').style.display = 'block';
+}
+
+// Next Question
+function nextQuestion(){
+  currentIndex++;
+  document.getElementById('next-btn').style.display = 'none';
+  const quizDiv = document.getElementById('quiz-container');
+  quizDiv.querySelector('div:last-child')?.remove(); // remove explanation
+  if(currentIndex >= questions.length){
+    endExam();
+  } else {
+    showQuestion();
+  }
+}
+
+// End Exam
+function endExam(){
+  clearInterval(timer);
+  document.getElementById('quiz-container').style.display = 'none';
+  document.getElementById('result-container').style.display = 'block';
+  document.getElementById('score').innerText = `Score: ${score} / ${questions.length}`;
+  document.getElementById('pass-fail').innerText = score >= 32 ? 'Félicitations! Vous avez réussi.' : 'Désolé, vous avez échoué.';
+  const partStats = {};
+  questions.forEach((q,i) => {
+    if(!partStats[q.part]) partStats[q.part] = {correct:0,total:0};
+    partStats[q.part].total++;
+    if(userAnswers[i].answer === q.correctAnswer) partStats[q.part].correct++;
+  });
+  let statsText = '';
+  for(let p in partStats){
+    statsText += `${p}: ${partStats[p].correct} / ${partStats[p].total} correct<br>`;
+  }
+  document.getElementById('part-stats').innerHTML = statsText;
+
+  // Save wrong answers to localStorage
+  const wrongs = [];
+  questions.forEach((q,i)=>{
+    if(userAnswers[i].answer !== q.correctAnswer){
+      wrongs.push({id: q.id, question: q.question, selected: userAnswers[i].answer, correct: q.correctAnswer, date: new Date().toLocaleString()});
+    }
+  });
+  if(wrongs.length>0){
+    const history = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+    localStorage.setItem(localStorageKey, JSON.stringify(history.concat(wrongs)));
+  }
+}
+
+// Timer
+function startTimer(){
+  const timerDiv = document.getElementById('timer');
+  timer = setInterval(()=>{
+    let minutes = Math.floor(timeLeft/60);
+    let seconds = timeLeft%60;
+    timerDiv.innerText = `${minutes}:${seconds<10?'0':''}${seconds}`;
+    timeLeft--;
+    if(timeLeft<0){
+      clearInterval(timer);
+      endExam();
+    }
+  },1000);
+}
+
+// View history
+function viewHistory(){
+  document.getElementById('result-container').style.display = 'none';
+  document.getElementById('review-container').style.display = 'block';
+  const history = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+  const reviewDiv = document.getElementById('review-list');
+  reviewDiv.innerHTML = '';
+  history.forEach(h => {
+    const div = document.createElement('div');
+    div.innerHTML = `<strong>${h.date}</strong>: ${h.question}<br>Votre réponse: ${h.selected}, Correct: ${h.correct}<br><br>`;
+    reviewDiv.appendChild(div);
+  });
+}
+
+// Close review
+function closeReview(){
+  document.getElementById('review-container').style.display = 'none';
+  document.getElementById('start-container').style.display = 'block';
+}
+
+// Restart
+function restartExam(){
+  location.reload();
+}
+</script>
+
+</body>
+</html>
