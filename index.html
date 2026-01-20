@@ -2,222 +2,345 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Je révise bien mon examen civique</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Examen Civique – Quiz</title>
+<link rel="icon" href="data:,">
+
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; background-color: #f0f0f0; }
-  #quiz-container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);}
-  h1,h2,h3 { text-align: center; }
-  #options button { display: block; margin: 10px 0; padding: 10px; width: 100%; }
-  #category-part { font-weight: bold; margin-bottom: 10px; }
-  #timer { float: right; font-weight: bold; }
-  #review-container { display:none; }
-  .correct { background-color: #c8e6c9; }
-  .wrong { background-color: #ffcdd2; }
+:root{
+  --primary:#6366f1;
+  --success:#22c55e;
+  --danger:#ef4444;
+  --bg:#f4f6fb;
+  --card:#fff;
+  --text:#1f2937;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:16px;
+}
+
+.card{
+  background:var(--card);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+  margin-bottom:16px;
+}
+
+/* Header */
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.meta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.meta span{
+  background:#eef2ff;
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:14px;
+  font-weight:500;
+}
+
+.status{
+  text-align:right;
+  font-weight:600;
+  color:var(--primary);
+}
+
+/* Buttons */
+.btn{
+  border:none;
+  border-radius:14px;
+  padding:14px;
+  width:100%;
+  font-size:16px;
+  font-weight:600;
+  cursor:pointer;
+  background:var(--primary);
+  color:#fff;
+  box-shadow:0 6px 16px rgba(99,102,241,.35);
+  transition:.15s;
+}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:scale(.97)}
+
+/* Options */
+.options{display:grid;gap:12px}
+.option{
+  background:#f9fafb;
+  padding:14px;
+  border-radius:14px;
+  border:2px solid transparent;
+  cursor:pointer;
+  transition:.2s;
+}
+.option:hover{
+  background:#eef2ff;
+  border-color:var(--primary);
+}
+.option.correct{
+  background:#dcfce7;
+  border-color:var(--success);
+  animation:pop .3s ease;
+}
+.option.wrong{
+  background:#fee2e2;
+  border-color:var(--danger);
+  animation:shake .35s ease;
+}
+
+/* Explanation */
+.explanation{
+  margin-top:16px;
+  padding:14px;
+  border-left:5px solid var(--primary);
+  background:#f8fafc;
+  border-radius:12px;
+  animation:fadeUp .3s ease;
+}
+
+@keyframes pop{
+  0%{transform:scale(.95)}
+  100%{transform:scale(1)}
+}
+@keyframes shake{
+  0%{transform:translateX(0)}
+  25%{transform:translateX(-4px)}
+  50%{transform:translateX(4px)}
+  75%{transform:translateX(-4px)}
+  100%{transform:translateX(0)}
+}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+@media(max-width:600px){
+  h1{font-size:22px}
+}
+
+/* ===== Croissant Rain ===== */
+.food {
+  position: fixed;
+  top: -40px;
+  font-size: 28px;
+  pointer-events: none;
+  animation: fall linear forwards;
+  z-index: 9999;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0.9;
+  }
+}
+
 </style>
 </head>
+
 <body>
+<div class="container">
 
-<div id="start-container">
-  <h1>Je révise bien mon examen civique</h1>
-  <h2>Choisissez le type d'examen :</h2>
-  <button onclick="startExam('CSP')">CSP</button>
-  <button onclick="startExam('CR')">CR</button>
+<!-- START -->
+<div id="start" class="card">
+  <h1>🥖 Je révise bien mon examen civique 🥐</h1>
+  <button class="btn" onclick="startExam('CSP')">Commencer CSP</button>
+  <br><br>
+  <button class="btn" onclick="startExam('CR')" style="background:#9ca3af;box-shadow:none">CR (bientôt)</button>
 </div>
 
-<div id="quiz-container" style="display:none;">
-  <div id="category-part"></div>
-  <div id="timer">45:00</div>
-  <h3 id="question-text"></h3>
-  <div id="options"></div>
-  <button id="next-btn" style="display:none;" onclick="nextQuestion()">Suivant</button>
+<!-- QUIZ -->
+<div id="quiz" style="display:none">
+
+  <div class="card header">
+    <div class="meta" id="meta"></div>
+    <div class="status">
+      <div id="progress"></div>
+      <div id="timer"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="question"></h2>
+    <div class="options" id="options"></div>
+    <div id="explanation"></div>
+  </div>
+
+  <button id="nextBtn" class="btn" style="display:none" onclick="nextQuestion()">Suivant</button>
 </div>
 
-<div id="result-container" style="display:none;">
-  <h2>Résultat</h2>
-  <div id="score"></div>
-  <div id="pass-fail"></div>
-  <div id="part-stats"></div>
-  <button onclick="viewHistory()">Voir l'historique des erreurs</button>
-  <button onclick="restartExam()">Recommencer</button>
-</div>
-
-<div id="review-container">
-  <h2>Historique des erreurs</h2>
-  <div id="review-list"></div>
-  <button onclick="closeReview()">Fermer</button>
 </div>
 
 <script>
-let examType = '';
-let questions = [];
-let currentIndex = 0;
-let score = 0;
+let examType='';
+let questions=[];
+let index=0;
+let score=0;
+let timeLeft=45*60;
 let timer;
-let timeLeft = 45 * 60; // 45 minutes
-let userAnswers = [];
-let parts = [];
-let localStorageKey = 'exam_history';
-
-// Start Exam
-function startExam(type){
-  examType = type;
-  if(type === 'CR'){
-    alert('CR est en préparation, veuillez choisir CSP.');
-    return;
-  }
-  fetch('csp.json')
-    .then(res => res.json())
-    .then(data => {
-      prepareQuestions(data);
-      document.getElementById('start-container').style.display = 'none';
-      document.getElementById('quiz-container').style.display = 'block';
-      startTimer();
-      showQuestion();
-    });
-}
-
-// Prepare 40 questions (8 per part)
-function prepareQuestions(data){
-  const grouped = {};
-  data.forEach(q => {
-    if(!grouped[q.part]) grouped[q.part] = [];
-    grouped[q.part].push(q);
-  });
-  questions = [];
-  parts = Object.keys(grouped);
-  parts.forEach(part => {
-    shuffle(grouped[part]);
-    questions = questions.concat(grouped[part].slice(0, 8));
-  });
-  shuffle(questions);
-}
-
-// Shuffle function
 function shuffle(array){
-  for(let i=array.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
+  for(let i = array.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;
 }
+function prepareQuestions(data){
+  const grouped = {};
 
-// Show Question
-function showQuestion(){
-  const q = questions[currentIndex];
-  document.getElementById('category-part').innerText = `Part: ${q.part} | Category: ${q.category}`;
-  document.getElementById('question-text').innerText = q.question;
-  const optionsDiv = document.getElementById('options');
-  optionsDiv.innerHTML = '';
-  for(let key in q.options){
-    const btn = document.createElement('button');
-    btn.innerText = `${key}: ${q.options[key]}`;
-    btn.onclick = () => selectAnswer(key);
-    optionsDiv.appendChild(btn);
-  }
-}
-
-// Select Answer
-function selectAnswer(answer){
-  const q = questions[currentIndex];
-  const optionsBtns = document.querySelectorAll('#options button');
-  userAnswers[currentIndex] = {questionId: q.id, answer: answer};
-  optionsBtns.forEach(btn => btn.disabled = true);
-  optionsBtns.forEach(btn => {
-    if(btn.innerText.startsWith(q.correctAnswer)) btn.classList.add('correct');
-    if(btn.innerText.startsWith(answer) && answer !== q.correctAnswer) btn.classList.add('wrong');
+  data.forEach(q => {
+    if(!grouped[q.part]) grouped[q.part] = [];
+    grouped[q.part].push(q);
   });
-  if(answer === q.correctAnswer) score++;
-  const explanation = document.createElement('div');
-  explanation.innerHTML = `<strong>Explication:</strong> ${q.explanation}`;
-  document.getElementById('quiz-container').appendChild(explanation);
-  document.getElementById('next-btn').style.display = 'block';
+
+  questions = [];
+
+  Object.keys(grouped).forEach(part => {
+    shuffle(grouped[part]);
+    questions = questions.concat(grouped[part].slice(0, 8));
+  });
+
+  shuffle(questions); // 打亂 40 題順序
 }
 
-// Next Question
+
+
+function startExam(type){
+  if(type==='CR'){
+    alert('CR est en préparation.');
+    return;
+  }
+  examType=type;
+  fetch('csp.json')
+  .then(r => r.json())
+  .then(data => {
+    prepareQuestions(data);   // ✅ 重點在這
+    document.getElementById('start').style.display='none';
+    document.getElementById('quiz').style.display='block';
+    startTimer();
+    showQuestion();
+  });
+}
+
+function showQuestion(){
+  const q=questions[index];
+  document.getElementById('meta').innerHTML=
+    `<span>Category: ${q.category}</span> <span>Part: ${q.part}</span>`;
+  document.getElementById('progress').innerText=
+    `Question ${index+1} / ${questions.length}`;
+  document.getElementById('question').innerText=q.question;
+  document.getElementById('explanation').innerHTML='';
+  document.getElementById('nextBtn').style.display='none';
+
+  const opt=document.getElementById('options');
+  opt.innerHTML='';
+  Object.entries(q.options).forEach(([k,v])=>{
+    const div=document.createElement('div');
+    div.className='option';
+    div.innerText=`${k}. ${v}`;
+    div.onclick=()=>selectAnswer(div,k);
+    opt.appendChild(div);
+  });
+}
+
+function selectAnswer(el,answer){
+  const q=questions[index];
+  document.querySelectorAll('.option').forEach(o=>o.onclick=null);
+
+  if(answer===q.correctAnswer){
+    el.classList.add('correct');
+    score++;
+    croissantRain(); // 🥐🥖🎉
+
+  }else{
+    el.classList.add('wrong');
+    document.querySelectorAll('.option').forEach(o=>{
+      if(o.innerText.startsWith(q.correctAnswer)) o.classList.add('correct');
+    });
+  }
+
+  document.getElementById('explanation').innerHTML=
+    `<div class="explanation"><strong>Explication :</strong><br>${q.explanation}</div>`;
+
+  document.getElementById('nextBtn').style.display='block';
+}
+
 function nextQuestion(){
-  currentIndex++;
-  document.getElementById('next-btn').style.display = 'none';
-  const quizDiv = document.getElementById('quiz-container');
-  quizDiv.querySelector('div:last-child')?.remove(); // remove explanation
-  if(currentIndex >= questions.length){
-    endExam();
-  } else {
+  index++;
+  if(index>=questions.length){
+    clearInterval(timer);
+    if(index >= questions.length){
+      clearInterval(timer);
+
+      const passed = score >= 32;
+      const message = passed
+        ? '🎉 Vous pouvez demander la carte de résident.'
+        : '❌ Bon courage pour la prochaine fois.';
+
+      alert(
+        `Résultat : ${score} / 40\n\n${message}`
+      );
+
+      location.reload();
+    }
+  }else{
     showQuestion();
   }
 }
 
-// End Exam
-function endExam(){
-  clearInterval(timer);
-  document.getElementById('quiz-container').style.display = 'none';
-  document.getElementById('result-container').style.display = 'block';
-  document.getElementById('score').innerText = `Score: ${score} / ${questions.length}`;
-  document.getElementById('pass-fail').innerText = score >= 32 ? 'Félicitations! Vous avez réussi.' : 'Désolé, vous avez échoué.';
-  const partStats = {};
-  questions.forEach((q,i) => {
-    if(!partStats[q.part]) partStats[q.part] = {correct:0,total:0};
-    partStats[q.part].total++;
-    if(userAnswers[i].answer === q.correctAnswer) partStats[q.part].correct++;
-  });
-  let statsText = '';
-  for(let p in partStats){
-    statsText += `${p}: ${partStats[p].correct} / ${partStats[p].total} correct<br>`;
-  }
-  document.getElementById('part-stats').innerHTML = statsText;
-
-  // Save wrong answers to localStorage
-  const wrongs = [];
-  questions.forEach((q,i)=>{
-    if(userAnswers[i].answer !== q.correctAnswer){
-      wrongs.push({id: q.id, question: q.question, selected: userAnswers[i].answer, correct: q.correctAnswer, date: new Date().toLocaleString()});
-    }
-  });
-  if(wrongs.length>0){
-    const history = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
-    localStorage.setItem(localStorageKey, JSON.stringify(history.concat(wrongs)));
-  }
-}
-
-// Timer
 function startTimer(){
-  const timerDiv = document.getElementById('timer');
-  timer = setInterval(()=>{
-    let minutes = Math.floor(timeLeft/60);
-    let seconds = timeLeft%60;
-    timerDiv.innerText = `${minutes}:${seconds<10?'0':''}${seconds}`;
+  timer=setInterval(()=>{
+    const m=Math.floor(timeLeft/60);
+    const s=timeLeft%60;
+    document.getElementById('timer').innerText=
+      `${m}:${s<10?'0':''}${s}`;
     timeLeft--;
     if(timeLeft<0){
       clearInterval(timer);
-      endExam();
+      alert('Temps écoulé');
     }
   },1000);
 }
 
-// View history
-function viewHistory(){
-  document.getElementById('result-container').style.display = 'none';
-  document.getElementById('review-container').style.display = 'block';
-  const history = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
-  const reviewDiv = document.getElementById('review-list');
-  reviewDiv.innerHTML = '';
-  history.forEach(h => {
-    const div = document.createElement('div');
-    div.innerHTML = `<strong>${h.date}</strong>: ${h.question}<br>Votre réponse: ${h.selected}, Correct: ${h.correct}<br><br>`;
-    reviewDiv.appendChild(div);
-  });
+
+function croissantRain(count = 25){
+  const emojis = ['🥐', '🥖'];
+
+  for(let i = 0; i < count; i++){
+    const span = document.createElement('span');
+    span.className = 'food';
+    span.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+
+    span.style.left = Math.random() * 100 + 'vw';
+    span.style.animationDuration = (2 + Math.random() * 2) + 's';
+    span.style.fontSize = (22 + Math.random() * 20) + 'px';
+
+    document.body.appendChild(span);
+
+    setTimeout(() => span.remove(), 4000);
+  }
 }
 
-// Close review
-function closeReview(){
-  document.getElementById('review-container').style.display = 'none';
-  document.getElementById('start-container').style.display = 'block';
-}
-
-// Restart
-function restartExam(){
-  location.reload();
-}
 </script>
-
 </body>
 </html>
