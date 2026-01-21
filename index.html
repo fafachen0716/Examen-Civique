@@ -240,6 +240,7 @@ function startExam(type){
     showQuestion();
   });
   }
+  else if (type==='CSP'){
   examType=type;
   fetch('csp.json')
   .then(r => r.json())
@@ -249,7 +250,7 @@ function startExam(type){
     document.getElementById('quiz').style.display='block';
     startTimer();
     showQuestion();
-  });
+  });}
 }
 
 function showQuestion(){
