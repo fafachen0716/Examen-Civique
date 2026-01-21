@@ -167,9 +167,9 @@ body{
 <!-- START -->
 <div id="start" class="card">
   <h1 class="title">🥖 Je révise bien mon examen civique 🥐</h1>
-  <button class="btn" onclick="startExam('CSP')">Commencer CSP</button>
+  <button class="btn" onclick="startExam('CSP')">Commencer CSP (titre de séjour pluriannuel)</button>
   <br><br>
-  <button class="btn" onclick="startExam('CR')" style="background:#9ca3af;box-shadow:none">CR (bientôt)</button>
+  <button class="btn" onclick="startExam('CR')">Commencer CR (résidence permanente)</button>
 </div>
 
 <!-- QUIZ -->
@@ -230,8 +230,15 @@ function prepareQuestions(data){
 
 function startExam(type){
   if(type==='CR'){
-    alert('CR est en préparation.');
-    return;
+  fetch('cr.json')
+  .then(r => r.json())
+  .then(data => {
+    prepareQuestions(data);   // ✅ 重點在這
+    document.getElementById('start').style.display='none';
+    document.getElementById('quiz').style.display='block';
+    startTimer();
+    showQuestion();
+  });
   }
   examType=type;
   fetch('csp.json')
